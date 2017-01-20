@@ -7,6 +7,7 @@ import re
 import os
 from cookielib import CookieJar
 from bs4 import BeautifulSoup
+from datetime import datetime
  
 class Tutsplus:
  
@@ -66,9 +67,11 @@ class Tutsplus:
  
         # the course's name
         self.course_title = soup.select('h1')[0].string
+        self.course_date = datetime.strptime(soup.select('.content-heading__publication-date')[0].string, "%d %b %Y").strftime("%Y-%m-%d ")
 
         foldername = re.sub('[^A-Za-z0-9 -\/]+', '', self.course_title)
         foldername = re.sub('[ ]', '-', foldername)
+        foldername = self.course_date + foldername
 
         if not os.path.exists("courses/" + foldername) :
             os.makedirs("courses/" + foldername)
@@ -80,7 +83,7 @@ class Tutsplus:
  
         for video in course_info:
             #print video['link']
-            print "[+] Downloading " + video['titolo']
+            print "[+] Downloading " + foldername + " - " + str(self.video_number).zfill(2)+ "-" + video['titolo']
             name = self.course_title + '/' + str(self.video_number).zfill(2) + '-' + video['titolo']
             self.download_file(video['link'], name, self.csrf_token)
             self.video_number = self.video_number + 1
@@ -99,15 +102,15 @@ class Tutsplus:
         # NOTE the stream=True parameter
         name = re.sub('[^A-Za-z0-9 -\/]+', '', name)
         name = re.sub('[ ]', '-', name)
-        name = name + '.mp4'
- 
+        name = self.course_date + name + '.mp4'
+        
         data = {
             "authenticity_token": token
         }
         postdata = urllib.urlencode(data)
         vid = self.opener.open(url, postdata)
- 
-        if not os.path.isfile("courses/" + name) :
+        
+        if not (os.path.isfile("courses/" + name) and os.path.getsize("courses/" + name) > 10000) :
             with open("courses/" + name, 'wb') as f:
                 f.write(vid.read())
         return name
